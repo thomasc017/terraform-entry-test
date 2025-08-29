@@ -65,3 +65,25 @@ resource "postgresql_grant" "db_admin_grants" {
   privileges  = ["ALL"]
 }
 
+# Create a random password for the read-only user
+resource "random_password" "readonly_password" {
+  length  = 16
+  special = true
+}
+
+# Create the read-only user
+resource "postgresql_role" "readonly_user" {
+  name     = "readonly_user"
+  login    = true
+  password = random_password.readonly_password.result
+}
+
+# Allow CONNECT to each database
+resource "postgresql_grant" "readonly_db_connect" {
+  for_each = toset(local.databases)
+
+  database    = each.key
+  role        = postgresql_role.readonly_user.name
+  object_type = "database"
+  privileges  = ["CONNECT"]
+}
