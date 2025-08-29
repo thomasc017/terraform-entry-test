@@ -27,7 +27,7 @@ locals {
 
   # Flattened list of fully qualified usernames like db1_dev_user1
   full_users = flatten([
-    for db in local.db_names : [
+    for db in local.databases : [
       for user in local.users_per_db : {
         db       = "${db}_${local.workspace}"
         username = "${db}_${local.workspace}_${user}"
@@ -39,13 +39,13 @@ locals {
 
 # Create the databases with workspace suffix
 resource "postgresql_database" "databases" {
-  for_each = toset(local.db_names)
+  for_each = toset(local.databases)
   name = "${each.key}_${local.workspace}"
 }
 
 # Generate a random password for each user
 resource "random_password" "user_passwords" {
-  for_each = toset(local.db_users)
+  for_each = toset(local.users_per_db)
 
   length  = 16
   special = true
