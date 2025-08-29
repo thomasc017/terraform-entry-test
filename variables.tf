@@ -9,13 +9,13 @@ variable "db_port" {
   default     = 5432
 }
 
-variable "db_user" {
-  description = "PostgreSQL admin user"
+variable "db_admin_user" {
+  description = "Admin user"
   type        = string
 }
 
-variable "db_password" {
-  description = "PostgreSQL admin password"
+variable "db_admin_password" {
+  description = "Admin password"
   type        = string
   sensitive   = true
 }

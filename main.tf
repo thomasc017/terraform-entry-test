@@ -4,28 +4,64 @@ terraform {
       source  = "cyrilgdn/postgresql"
       version = "1.21.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "3.5.1"
+    }
   }
-
-  required_version = ">= 1.0"
 }
 
 provider "postgresql" {
   host            = var.db_host
   port            = var.db_port
-  username        = var.db_user
-  password        = var.db_password
+  username        = var.db_admin_user
+  password        = var.db_admin_password
   sslmode         = "disable"
   connect_timeout = 15
 }
 
-resource "postgresql_database" "db1" {
-  name = "database_one"
+locals {
+  databases    = ["db1", "db2", "db3"]
+  users_per_db = ["user1", "user2"]
+
+  # Flattened list of users in format db_user
+  db_users = flatten([
+    for db in local.databases : [
+      for user in local.users_per_db : "${db}_${user}"
+    ]
+  ])
 }
 
-resource "postgresql_database" "db2" {
-  name = "database_two"
+# Create databases
+resource "postgresql_database" "databases" {
+  for_each = toset(local.databases)
+  name     = each.key
 }
 
-resource "postgresql_database" "db3" {
-  name = "database_three"
+# Generate a random password for each user
+resource "random_password" "user_passwords" {
+  for_each = toset(local.db_users)
+
+  length  = 16
+  special = true
 }
+
+# Create users with their passwords
+resource "postgresql_role" "users" {
+  for_each = random_password.user_passwords
+
+  name     = each.key
+  password = each.value.result
+  login    = true
+}
+
+# Grant admin-level privileges on the database
+resource "postgresql_grant" "db_admin_grants" {
+  for_each = random_password.user_passwords
+
+  database    = split("_", each.key)[0]
+  role        = each.key
+  object_type = "database"
+  privileges  = ["ALL"]
+}
+
